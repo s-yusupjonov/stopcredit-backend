@@ -1,0 +1,26 @@
+# Build
+target/
+build/
+*.log
+
+# Secrets
+.env
+
+# IDEs
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.classpath
+.project
+.settings/
+.factorypath
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc
+HELP.md
+*.class
