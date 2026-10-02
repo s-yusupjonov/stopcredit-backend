@@ -57,6 +57,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/login").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/api/users/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/cards/**", "/api/executors/**")
+                        .hasAnyRole("ANTI_FRAUD", "MANAGEMENT")
+                        .requestMatchers("/api/cards/**", "/api/executors/**").hasRole("ANTI_FRAUD")
                         .requestMatchers(HttpMethod.POST, "/api/credits").hasRole("ANTI_FRAUD")
                         .requestMatchers(HttpMethod.PATCH, "/api/credits/*/status").hasRole("CREDIT_MANAGEMENT")
                         // stage ownership is enforced in CreditAccess
