@@ -7,6 +7,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 import uz.agrobank.stopcredit.domain.Card;
 import uz.agrobank.stopcredit.domain.CardDocument;
+import uz.agrobank.stopcredit.domain.CardDocumentKind;
 import uz.agrobank.stopcredit.dto.CardDocumentResponse;
 import uz.agrobank.stopcredit.dto.DownloadedFile;
 import uz.agrobank.stopcredit.exception.ApiException;
@@ -41,15 +42,21 @@ public class CardDocumentService {
     @Transactional
     public List<CardDocumentResponse> upload(AuthUser user, Long cardId, List<MultipartFile> files) {
         Card card = findCard(cardId);
+        String uploader = userRepository.findById(user.id())
+                .orElseThrow(() -> ApiException.unauthorized("User not found"))
+                .getFullName();
+        return attach(card, uploader, files, CardDocumentKind.RESTRICTION);
+    }
+
+    @Transactional
+    public List<CardDocumentResponse> attach(Card card, String uploader, List<MultipartFile> files,
+                                             CardDocumentKind kind) {
         if (files == null || files.isEmpty()) {
             throw ApiException.badRequest("At least one PDF file is required");
         }
         files.forEach(this::requirePdf);
-        String uploader = userRepository.findById(user.id())
-                .orElseThrow(() -> ApiException.unauthorized("User not found"))
-                .getFullName();
         return files.stream()
-                .map(file -> mapper.toResponse(store(card, uploader, file)))
+                .map(file -> mapper.toResponse(store(card, uploader, file, kind)))
                 .toList();
     }
 
@@ -74,7 +81,7 @@ public class CardDocumentService {
                 .toList();
     }
 
-    private CardDocument store(Card card, String uploader, MultipartFile file) {
+    private CardDocument store(Card card, String uploader, MultipartFile file, CardDocumentKind kind) {
         String objectKey = "cards/%d/%s.pdf".formatted(card.getId(), UUID.randomUUID());
         try (InputStream in = file.getInputStream()) {
             storage.put(objectKey, in, file.getSize(), PDF_CONTENT_TYPE);
@@ -86,6 +93,7 @@ public class CardDocumentService {
         document.setFileName(StringUtils.getFilename(StringUtils.cleanPath(file.getOriginalFilename())));
         document.setObjectKey(objectKey);
         document.setSizeBytes(file.getSize());
+        document.setKind(kind);
         document.setUploadedBy(uploader);
         return documentRepository.saveAndFlush(document);
     }

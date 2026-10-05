@@ -26,7 +26,8 @@ public class CardExcelExporter {
 
     private static final String[] HEADERS = {
             "T/r", "Karta raqami", "MFO", "Sana", "Karta balansi", "Cheklov turi", "Asos",
-            "Buyruq raqami", "Status", "Eslatma", "Ijrochi", "Yuboruvchi", "Yaratilgan"};
+            "Buyruq raqami", "Status", "Eslatma", "Ijrochi", "Yuboruvchi", "Yaratilgan",
+            "Ochish buyruq raqami", "Ochish eslatmasi", "Ochilgan sana"};
 
     private static final Map<String, String> STATUS = Map.of("ACTIVE", "Aktiv", "BLOCKED", "Bloklangan");
     private static final Map<String, String> RESTRICTION = Map.of("FULL", "To'liq", "PARTIAL", "Qisman");
@@ -80,6 +81,9 @@ public class CardExcelExporter {
                 row.createCell(10).setCellValue(executor(c.executor()));
                 row.createCell(11).setCellValue(c.senderName());
                 row.createCell(12).setCellValue(format(c.createdAt()));
+                row.createCell(13).setCellValue(text(c.unblockOrderNumber()));
+                row.createCell(14).setCellValue(text(c.unblockComment()));
+                row.createCell(15).setCellValue(format(c.unblockedAt()));
             }
 
             workbook.write(out);

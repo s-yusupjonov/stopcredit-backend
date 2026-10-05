@@ -24,5 +24,9 @@ public record CardResponse(
         String senderName,
         Instant createdAt,
         Instant updatedAt,
+        String unblockOrderNumber,
+        String unblockComment,
+        Instant unblockedAt,
+        String unblockedBy,
         List<CardDocumentResponse> documents) {
 }
