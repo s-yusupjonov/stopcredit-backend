@@ -1,4 +1,4 @@
-package uz.agrobank.stopcredit.ldap;
+package uz.agrobank.stopcredit.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
