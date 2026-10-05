@@ -9,8 +9,6 @@ import uz.agrobank.stopcredit.domain.User;
 import uz.agrobank.stopcredit.dto.LoginRequest;
 import uz.agrobank.stopcredit.dto.LoginResponse;
 import uz.agrobank.stopcredit.exception.ApiException;
-import uz.agrobank.stopcredit.ldap.LdapAuthenticationService;
-import uz.agrobank.stopcredit.ldap.LdapUserProvisioningService;
 import uz.agrobank.stopcredit.mapper.UserMapper;
 import uz.agrobank.stopcredit.repository.UserRepository;
 import uz.agrobank.stopcredit.security.JwtService;
