@@ -54,6 +54,7 @@ public class CardMapper {
                 card.getUnblockComment(),
                 card.getUnblockedAt(),
                 card.getUnblockedBy(),
+                card.getVersion(),
                 documents);
     }
 

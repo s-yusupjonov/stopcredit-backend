@@ -1,13 +1,18 @@
 package uz.agrobank.stopcredit.config;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.ldap.core.LdapTemplate;
 import org.springframework.ldap.core.support.LdapContextSource;
+import org.springframework.util.StringUtils;
 
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 
+@Slf4j
 @Configuration
 public class LdapConfig {
 
@@ -22,12 +27,13 @@ public class LdapConfig {
 
     @Bean
     public LdapContextSource ldapContextSource() {
+        warnAboutUnsafeSettings();
 
         LdapContextSource contextSource = new LdapContextSource();
         contextSource.setUrl(properties.url());
         contextSource.setBase(properties.base());
-        contextSource.setUserDn(properties.managerDn());
-        contextSource.setPassword(properties.managerPassword());
+        contextSource.setUserDn(Objects.requireNonNullElse(properties.managerDn(), ""));
+        contextSource.setPassword(Objects.requireNonNullElse(properties.managerPassword(), ""));
         contextSource.setReferral("ignore");
 
         Map<String, Object> baseEnv = new HashMap<>();
@@ -48,5 +54,14 @@ public class LdapConfig {
         ldapTemplate.setIgnorePartialResultException(true);
 
         return ldapTemplate;
+    }
+
+    private void warnAboutUnsafeSettings() {
+        if (!StringUtils.hasText(properties.managerDn()) || !StringUtils.hasText(properties.managerPassword())) {
+            log.warn("LDAP_MANAGER_DN / LDAP_MANAGER_PASSWORD are not set - Active Directory logins will fail");
+        }
+        if (properties.url() != null && properties.url().toLowerCase(Locale.ROOT).startsWith("ldap://")) {
+            log.warn("LDAP_URL uses plain ldap:// - bind passwords travel unencrypted; use ldaps:// in production");
+        }
     }
 }

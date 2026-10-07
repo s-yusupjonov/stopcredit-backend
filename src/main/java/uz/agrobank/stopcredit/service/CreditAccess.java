@@ -27,7 +27,7 @@ public class CreditAccess {
     public Credit loadForWork(AuthUser user, Long id) {
         Credit credit = loadVisibleForUpdate(user, id);
         if (!credit.getStage().isOwnedBy(user.role())) {
-            throw ApiException.forbidden("Credit is not at your department's stage");
+            throw ApiException.forbidden("Kredit sizning bo'limingiz bosqichida emas");
         }
         return credit;
     }
@@ -35,6 +35,6 @@ public class CreditAccess {
     private Credit visibleTo(AuthUser user, Optional<Credit> credit, Long id) {
         return credit
                 .filter(c -> CreditStage.visibleTo(user.role()).contains(c.getStage()))
-                .orElseThrow(() -> ApiException.notFound("Credit not found: " + id));
+                .orElseThrow(() -> ApiException.notFound("Kredit topilmadi: " + id));
     }
 }

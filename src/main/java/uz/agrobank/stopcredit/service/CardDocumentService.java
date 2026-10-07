@@ -58,6 +58,10 @@ public class CardDocumentService {
     @Transactional
     public void delete(AuthUser user, Long cardId, Long documentId) {
         CardDocument document = find(cardId, documentId);
+        // the unblock order is the evidence the card was released lawfully; it must outlive the action
+        if (document.getKind() == CardDocumentKind.UNBLOCK) {
+            throw ApiException.forbidden("Blokdan ochish buyrug'ini o'chirib bo'lmaydi");
+        }
         documentRepository.delete(document);
         pdfStorage.deleteAfterCommit(document.getObjectKey());
         audit.record(user, AuditEntity.CARD, cardId, AuditAction.DELETE_DOCUMENT, document.getFileName());
@@ -83,11 +87,11 @@ public class CardDocumentService {
 
     private Card findCard(Long cardId) {
         return cardRepository.findById(cardId)
-                .orElseThrow(() -> ApiException.notFound("Card not found: " + cardId));
+                .orElseThrow(() -> ApiException.notFound("Karta topilmadi: " + cardId));
     }
 
     private CardDocument find(Long cardId, Long documentId) {
         return documentRepository.findByIdAndCardId(documentId, cardId)
-                .orElseThrow(() -> ApiException.notFound("Document not found: " + documentId));
+                .orElseThrow(() -> ApiException.notFound("Hujjat topilmadi: " + documentId));
     }
 }

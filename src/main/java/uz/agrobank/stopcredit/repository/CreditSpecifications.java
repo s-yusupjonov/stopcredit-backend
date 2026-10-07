@@ -45,12 +45,13 @@ public final class CreditSpecifications {
         if (text == null || text.isBlank()) {
             return null;
         }
-        String pattern = "%" + text.trim().toLowerCase() + "%";
+        String pattern = LikePattern.containsIgnoreCase(text.trim());
+        char escape = LikePattern.ESCAPE;
         return (root, query, cb) -> cb.or(
-                cb.like(cb.lower(root.<String>get("firstName")), pattern),
-                cb.like(cb.lower(root.<String>get("lastName")), pattern),
-                cb.like(cb.lower(root.<String>get("middleName")), pattern),
-                cb.like(root.<String>get("pinfl"), pattern),
-                cb.like(cb.lower(root.<String>get("applicationNumber")), pattern));
+                cb.like(cb.lower(root.<String>get("firstName")), pattern, escape),
+                cb.like(cb.lower(root.<String>get("lastName")), pattern, escape),
+                cb.like(cb.lower(root.<String>get("middleName")), pattern, escape),
+                cb.like(root.<String>get("pinfl"), pattern, escape),
+                cb.like(cb.lower(root.<String>get("applicationNumber")), pattern, escape));
     }
 }

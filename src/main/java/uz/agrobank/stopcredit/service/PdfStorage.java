@@ -35,7 +35,7 @@ public class PdfStorage {
 
     public List<StoredPdf> storeAll(List<MultipartFile> files, String keyPrefix) {
         if (files == null || files.isEmpty()) {
-            throw ApiException.badRequest("At least one PDF file is required");
+            throw ApiException.badRequest("Kamida bitta PDF fayl yuklang");
         }
         files.forEach(this::requireValidPdf);
         List<String> storedKeys = new ArrayList<>();
@@ -85,13 +85,13 @@ public class PdfStorage {
     private void requireValidPdf(MultipartFile file) {
         String name = file.getOriginalFilename();
         if (file.isEmpty() || name == null || !name.toLowerCase(Locale.ROOT).endsWith(".pdf")) {
-            throw ApiException.badRequest("Only non-empty PDF files are allowed: " + name);
+            throw ApiException.badRequest("Faqat bo'sh bo'lmagan PDF fayl qabul qilinadi: " + name);
         }
         if (fileNameOf(file).length() > MAX_FILE_NAME_LENGTH) {
-            throw ApiException.badRequest("File name is too long: " + name);
+            throw ApiException.badRequest("Fayl nomi juda uzun (ko'pi bilan 255 belgi): " + name);
         }
         if (!hasPdfStructure(file)) {
-            throw ApiException.badRequest("File is not a valid PDF: " + name);
+            throw ApiException.badRequest("Fayl haqiqiy PDF emas: " + name);
         }
     }
 

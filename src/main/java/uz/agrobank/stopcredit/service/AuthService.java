@@ -37,8 +37,12 @@ public class AuthService {
         String attemptKey = username.toLowerCase(Locale.ROOT);
         loginAttemptLimiter.checkAllowed(attemptKey);
 
-        User user = authenticateActiveUser(username, request.password(), attemptKey);
+        User user = authenticateCountingFailures(username, request.password(), attemptKey);
         loginAttemptLimiter.reset(attemptKey);
+        // the password was correct, so telling the person why they cannot get in leaks nothing
+        if (!user.isActive()) {
+            throw ApiException.forbidden("Hisobingiz faol emas. Administrator faollashtirishi kerak");
+        }
         return new LoginResponse(jwtService.generate(user), userMapper.toResponse(user));
     }
 
@@ -46,16 +50,12 @@ public class AuthService {
     public UserResponse currentUser(AuthUser principal) {
         return userRepository.findById(principal.id())
                 .map(userMapper::toResponse)
-                .orElseThrow(() -> ApiException.unauthorized("User not found"));
+                .orElseThrow(() -> ApiException.unauthorized("Foydalanuvchi topilmadi"));
     }
 
-    private User authenticateActiveUser(String username, String password, String attemptKey) {
+    private User authenticateCountingFailures(String username, String password, String attemptKey) {
         try {
-            User user = authenticate(username, password);
-            if (!user.isActive()) {
-                throw invalidCredentials();
-            }
-            return user;
+            return authenticate(username, password);
         } catch (ApiException e) {
             loginAttemptLimiter.recordFailure(attemptKey);
             throw e;
@@ -89,6 +89,6 @@ public class AuthService {
     }
 
     private ApiException invalidCredentials() {
-        return ApiException.unauthorized("Invalid username or password");
+        return ApiException.unauthorized("Login yoki parol noto'g'ri");
     }
 }

@@ -13,7 +13,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public record CardRequest(
-        @NotBlank @Pattern(regexp = "\\d{16}", message = "Card number must be exactly 16 digits") String cardNumber,
+        @NotBlank @Pattern(regexp = "\\d{16}", message = "Karta raqami 16 ta raqamdan iborat bo'lishi kerak") String cardNumber,
         @Size(max = 10) String mfo,
         LocalDate restrictionDate,
         @Digits(integer = 17, fraction = 2) BigDecimal balance,
@@ -22,5 +22,7 @@ public record CardRequest(
         @Size(max = 500) String basisComment,
         @NotNull CardStatus status,
         @Size(max = 500) String statusComment,
-        @NotNull Long executorId) {
+        @NotNull Long executorId,
+        // version the client last saw; when sent, an update made from a stale screen is rejected with 409
+        Long version) {
 }

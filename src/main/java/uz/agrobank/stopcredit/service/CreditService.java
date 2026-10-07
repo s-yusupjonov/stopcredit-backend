@@ -61,6 +61,10 @@ public class CreditService {
     @Transactional
     public CreditResponse update(AuthUser user, Long id, CreditRequest request) {
         Credit credit = access.loadForWork(user, id);
+        StaleCheck.requireCurrent(request.version(), credit.getVersion());
+        if (request.status() != credit.getStatus()) {
+            throw ApiException.badRequest("Kredit statusini faqat Kredit boshqaruvi bo'limi o'zgartira oladi");
+        }
         if (creditRepository.existsByApplicationNumberAndIdNot(request.applicationNumber().trim(), id)) {
             throw duplicateApplicationNumber(request.applicationNumber());
         }
@@ -72,6 +76,9 @@ public class CreditService {
     @Transactional
     public CreditResponse updateStatus(AuthUser user, Long id, CreditStatus status) {
         Credit credit = access.loadVisibleForUpdate(user, id);
+        if (credit.getStatus() == status) {
+            return toResponse(credit);
+        }
         audit.record(user, AuditEntity.CREDIT, id, AuditAction.STATUS_CHANGE, change(credit.getStatus(), status));
         credit.setStatus(status);
         return toResponse(creditRepository.saveAndFlush(credit));
@@ -81,7 +88,7 @@ public class CreditService {
     public CreditResponse advance(AuthUser user, Long id) {
         Credit credit = access.loadForWork(user, id);
         if (!documentService.existsForStage(credit.getId(), credit.getStage())) {
-            throw ApiException.badRequest("Upload at least one PDF document before forwarding the credit");
+            throw ApiException.badRequest("Keyingi bosqichga yuborishdan oldin kamida bitta PDF hujjat yuklang");
         }
         CreditStage next = credit.getStage().next();
         audit.record(user, AuditEntity.CREDIT, id, AuditAction.ADVANCE, change(credit.getStage(), next));
@@ -136,6 +143,6 @@ public class CreditService {
     }
 
     private ApiException duplicateApplicationNumber(String applicationNumber) {
-        return ApiException.conflict("Application number already exists: " + applicationNumber);
+        return ApiException.conflict("Bunday ariza raqami allaqachon mavjud: " + applicationNumber.trim());
     }
 }

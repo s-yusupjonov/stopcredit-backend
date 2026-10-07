@@ -21,7 +21,8 @@ spring:
       max-file-size: 20MB
       max-request-size: 100MB
   jackson:
-    default-property-inclusion: non_null
+    # nullable fields are sent as explicit null so the client sees one stable shape
+    default-property-inclusion: always
 
 minio:
   endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
@@ -31,7 +32,8 @@ minio:
 
 admin:
   default-username: ${ADMIN_USERNAME:admin}
-  default-password: ${ADMIN_PASSWORD:changeme}
+  # left empty -> a random password is generated once and written to the startup log
+  default-password: ${ADMIN_PASSWORD:}
 
 jwt:
   secret: ${JWT_SECRET}
@@ -42,14 +44,15 @@ ldap:
   base: ${LDAP_BASE:DC=corp,DC=agrobank,DC=uz}
   user-search-base: ${LDAP_USER_SEARCH_BASE:}
   user-search-filter: ${LDAP_USER_SEARCH_FILTER:(sAMAccountName={0})}
-  manager-dn: ${LDAP_MANAGER_DN:CN=davomat,OU=Services Users,OU=Priveleged Accounts,DC=corp,DC=agrobank,DC=uz}
-  manager-password: ${LDAP_MANAGER_PASSWORD:Amazon12meta!$}
+  # service account credentials are secrets: supply them only through the environment / .env
+  manager-dn: ${LDAP_MANAGER_DN:}
+  manager-password: ${LDAP_MANAGER_PASSWORD:}
 
 credit:
   review-deadline-days: ${CREDIT_REVIEW_DEADLINE_DAYS:3}
 
 cors:
-  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
 
 logging:
   level:

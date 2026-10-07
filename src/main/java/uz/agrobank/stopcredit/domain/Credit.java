@@ -8,6 +8,8 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -58,4 +60,9 @@ public class Credit extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "created_by", nullable = false, updatable = false)
     private User createdBy;
+
+    @Version
+    @Setter(AccessLevel.NONE)
+    @Column(nullable = false)
+    private long version;
 }

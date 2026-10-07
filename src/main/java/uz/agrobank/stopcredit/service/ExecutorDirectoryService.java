@@ -33,7 +33,7 @@ public class ExecutorDirectoryService {
         mapper.apply(executor, request);
         if (executorRepository.existsByNameAndPhoneAndExtension(
                 executor.getName(), executor.getPhone(), executor.getExtension())) {
-            throw ApiException.conflict("Executor already exists: " + executor.getName());
+            throw ApiException.conflict("Bunday ijrochi allaqachon mavjud: " + executor.getName());
         }
         return mapper.toResponse(executorRepository.saveAndFlush(executor));
     }

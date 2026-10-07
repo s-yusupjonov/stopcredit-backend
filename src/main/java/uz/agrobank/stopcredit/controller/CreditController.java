@@ -53,7 +53,8 @@ public class CreditController {
             @AuthenticationPrincipal AuthUser user,
             @ModelAttribute CreditFilter filter,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        return new PagedModel<>(creditService.search(user, filter, pageable));
+        return new PagedModel<>(creditService.search(user, filter,
+                SortGuard.allowOnly(pageable, SortGuard.CREDIT_PROPERTIES)));
     }
 
     @GetMapping("/summary")

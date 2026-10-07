@@ -44,6 +44,7 @@ public class CreditMapper {
                 credit.getCreatedBy().getFullName(),
                 credit.getCreatedAt(),
                 credit.getUpdatedAt(),
+                credit.getVersion(),
                 documents);
     }
 

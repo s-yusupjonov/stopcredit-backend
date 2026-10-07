@@ -12,7 +12,7 @@ final class ExportLimit {
     static void require(long rows) {
         if (rows > MAX_ROWS) {
             throw ApiException.badRequest(
-                    "Export is limited to %d rows, found %d. Narrow the filters".formatted(MAX_ROWS, rows));
+                    "Eksport %d qator bilan cheklangan, topildi: %d. Filtrlarni toraytiring".formatted(MAX_ROWS, rows));
         }
     }
 }

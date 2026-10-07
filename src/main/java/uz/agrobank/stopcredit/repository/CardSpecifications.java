@@ -34,8 +34,8 @@ public final class CardSpecifications {
         if (mfo == null || mfo.isBlank()) {
             return null;
         }
-        String pattern = mfo.trim() + "%";
-        return (root, query, cb) -> cb.like(root.<String>get("mfo"), pattern);
+        String pattern = LikePattern.startsWith(mfo.trim());
+        return (root, query, cb) -> cb.like(root.<String>get("mfo"), pattern, LikePattern.ESCAPE);
     }
 
     private static Specification<Card> executorIs(Long executorId) {
@@ -63,18 +63,19 @@ public final class CardSpecifications {
         if (text == null || text.isBlank()) {
             return null;
         }
-        String lower = "%" + text.trim().toLowerCase() + "%";
-        String digits = "%" + text.replaceAll("\\s", "") + "%";
+        String lower = LikePattern.containsIgnoreCase(text.trim());
+        String digits = LikePattern.contains(text.replaceAll("\\s", ""));
+        char escape = LikePattern.ESCAPE;
         return (root, query, cb) -> {
             var executor = root.join("executor", JoinType.INNER);
             return cb.or(
-                    cb.like(root.<String>get("cardNumber"), digits),
-                    cb.like(cb.lower(root.<String>get("senderName")), lower),
-                    cb.like(cb.lower(root.<String>get("basisComment")), lower),
-                    cb.like(cb.lower(root.<String>get("statusComment")), lower),
-                    cb.like(cb.lower(root.<String>get("unblockOrderNumber")), lower),
-                    cb.like(cb.lower(root.<String>get("unblockComment")), lower),
-                    cb.like(cb.lower(executor.<String>get("name")), lower));
+                    cb.like(root.<String>get("cardNumber"), digits, escape),
+                    cb.like(cb.lower(root.<String>get("senderName")), lower, escape),
+                    cb.like(cb.lower(root.<String>get("basisComment")), lower, escape),
+                    cb.like(cb.lower(root.<String>get("statusComment")), lower, escape),
+                    cb.like(cb.lower(root.<String>get("unblockOrderNumber")), lower, escape),
+                    cb.like(cb.lower(root.<String>get("unblockComment")), lower, escape),
+                    cb.like(cb.lower(executor.<String>get("name")), lower, escape));
         };
     }
 }

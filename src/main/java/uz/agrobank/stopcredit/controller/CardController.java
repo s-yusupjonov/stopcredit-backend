@@ -54,7 +54,7 @@ public class CardController {
     public PagedModel<CardResponse> list(
             @ModelAttribute CardFilter filter,
             @PageableDefault(size = 20, sort = "id", direction = Sort.Direction.DESC) Pageable pageable) {
-        return new PagedModel<>(cardService.search(filter, pageable));
+        return new PagedModel<>(cardService.search(filter, SortGuard.allowOnly(pageable, SortGuard.CARD_PROPERTIES)));
     }
 
     @GetMapping("/export")

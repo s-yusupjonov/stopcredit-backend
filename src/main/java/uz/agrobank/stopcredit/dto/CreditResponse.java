@@ -25,5 +25,6 @@ public record CreditResponse(
         String createdBy,
         Instant createdAt,
         Instant updatedAt,
+        long version,
         List<DocumentResponse> documents) {
 }

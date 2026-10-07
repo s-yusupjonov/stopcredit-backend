@@ -20,7 +20,7 @@ public class LoginAttemptLimiter {
     public void checkAllowed(String key) {
         Attempts current = attempts.get(key);
         if (current != null && !isExpired(current) && current.failures() >= MAX_FAILURES) {
-            throw ApiException.tooManyRequests("Too many failed login attempts. Try again later");
+            throw ApiException.tooManyRequests("Juda ko'p muvaffaqiyatsiz urinish. 15 daqiqadan keyin qayta urinib ko'ring");
         }
     }
 

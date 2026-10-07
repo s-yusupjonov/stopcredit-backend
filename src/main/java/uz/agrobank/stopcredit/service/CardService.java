@@ -52,8 +52,9 @@ public class CardService {
     @Transactional
     public CardResponse update(AuthUser user, Long id, CardRequest request) {
         Card card = findForUpdate(id);
+        StaleCheck.requireCurrent(request.version(), card.getVersion());
         if (card.getStatus() != request.status()) {
-            throw ApiException.badRequest("Card status can only be changed by unblocking the card");
+            throw ApiException.badRequest("Karta statusini faqat \"Blokdan ochish\" amali orqali o'zgartirish mumkin");
         }
         mapper.apply(card, request, findExecutor(request.executorId()));
         audit.record(user, AuditEntity.CARD, id, AuditAction.UPDATE);
@@ -64,7 +65,7 @@ public class CardService {
     public CardResponse unblock(AuthUser user, Long id, CardUnblockRequest request, List<MultipartFile> files) {
         Card card = findForUpdate(id);
         if (card.getStatus() != CardStatus.BLOCKED) {
-            throw ApiException.badRequest("Only blocked cards can be unblocked");
+            throw ApiException.badRequest("Faqat bloklangan kartani blokdan ochish mumkin");
         }
         String actor = userService.fullNameOf(user);
         documentService.attach(card, actor, files, CardDocumentKind.UNBLOCK);
@@ -102,17 +103,17 @@ public class CardService {
 
     private Card find(Long id) {
         return cardRepository.findById(id)
-                .orElseThrow(() -> ApiException.notFound("Card not found: " + id));
+                .orElseThrow(() -> ApiException.notFound("Karta topilmadi: " + id));
     }
 
     private Card findForUpdate(Long id) {
         return cardRepository.findByIdForUpdate(id)
-                .orElseThrow(() -> ApiException.notFound("Card not found: " + id));
+                .orElseThrow(() -> ApiException.notFound("Karta topilmadi: " + id));
     }
 
     private Executor findExecutor(Long id) {
         return executorRepository.findById(id)
-                .orElseThrow(() -> ApiException.badRequest("Executor not found: " + id));
+                .orElseThrow(() -> ApiException.badRequest("Ijrochi topilmadi: " + id));
     }
 
 }

@@ -56,7 +56,7 @@ public class CreditDocumentService {
         Credit credit = access.loadForWork(user, creditId);
         CreditDocument document = find(credit, documentId);
         if (document.getStage() != credit.getStage()) {
-            throw ApiException.forbidden("Documents of previous stages cannot be removed");
+            throw ApiException.forbidden("Oldingi bosqich hujjatlarini o'chirib bo'lmaydi");
         }
         documentRepository.delete(document);
         pdfStorage.deleteAfterCommit(document.getObjectKey());
@@ -90,6 +90,6 @@ public class CreditDocumentService {
 
     private CreditDocument find(Credit credit, Long documentId) {
         return documentRepository.findByIdAndCreditId(documentId, credit.getId())
-                .orElseThrow(() -> ApiException.notFound("Document not found: " + documentId));
+                .orElseThrow(() -> ApiException.notFound("Hujjat topilmadi: " + documentId));
     }
 }

@@ -38,7 +38,7 @@ public class UserService {
     public UserResponse create(AuthUser actor, UserCreateRequest request) {
         String username = request.username().trim();
         if (userRepository.existsByUsernameIgnoreCase(username)) {
-            throw ApiException.conflict("Username already exists: " + username);
+            throw ApiException.conflict("Bunday login allaqachon mavjud: " + username);
         }
         User user = request.authSource() == AuthSource.AD
                 ? newAdUser(username)
@@ -58,34 +58,34 @@ public class UserService {
     public AdLookupResponse lookupAdAccount(String username) {
         String name = username.trim();
         if (name.isEmpty()) {
-            throw ApiException.badRequest("Username is required");
+            throw ApiException.badRequest("Login kiritilishi shart");
         }
         String fullName = ldapAuthenticationService.lookupFullName(name)
-                .orElseThrow(() -> ApiException.notFound("Active Directory account not found: " + name));
+                .orElseThrow(() -> ApiException.notFound("Active Directory'da bunday login topilmadi: " + name));
         return new AdLookupResponse(name, fullName, userRepository.existsByUsernameIgnoreCase(name));
     }
 
     @Transactional(readOnly = true)
     public String fullNameOf(AuthUser actor) {
         return userRepository.findById(actor.id())
-                .orElseThrow(() -> ApiException.unauthorized("User not found"))
+                .orElseThrow(() -> ApiException.unauthorized("Foydalanuvchi topilmadi"))
                 .getFullName();
     }
 
     @Transactional
     public UserResponse update(AuthUser actor, Long id, UserUpdateRequest request) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> ApiException.notFound("User not found: " + id));
+                .orElseThrow(() -> ApiException.notFound("Foydalanuvchi topilmadi: " + id));
         boolean passwordChange = request.password() != null && !request.password().isBlank();
         if (passwordChange && user.getAuthSource() == AuthSource.AD) {
-            throw ApiException.badRequest("Active Directory users authenticate with their AD password");
+            throw ApiException.badRequest("AD foydalanuvchisi o'z AD paroli bilan kiradi, unga lokal parol o'rnatib bo'lmaydi");
         }
         requireAnotherActiveAdmin(user, request);
 
         String changes = describeChanges(user, request);
         boolean deactivated = user.isActive() && !request.active();
 
-        user.setFullName(request.fullName());
+        user.setFullName(request.fullName().trim());
         user.setRole(request.role());
         user.setActive(request.active());
         if (passwordChange) {
@@ -104,12 +104,12 @@ public class UserService {
 
     private User newLocalUser(String username, UserCreateRequest request) {
         if (request.password() == null || request.password().isBlank()) {
-            throw ApiException.badRequest("Password is required for local users");
+            throw ApiException.badRequest("Lokal foydalanuvchi uchun parol majburiy");
         }
         User user = new User();
         user.setUsername(username);
         user.setPasswordHash(passwordEncoder.encode(request.password()));
-        user.setFullName(request.fullName());
+        user.setFullName(request.fullName().trim());
         return user;
     }
 
@@ -117,7 +117,7 @@ public class UserService {
         User user = new User();
         user.setUsername(username);
         user.setFullName(ldapAuthenticationService.lookupFullName(username)
-                .orElseThrow(() -> ApiException.badRequest("Active Directory account not found: " + username)));
+                .orElseThrow(() -> ApiException.badRequest("Active Directory'da bunday login topilmadi: " + username)));
         user.setAuthSource(AuthSource.AD);
         return user;
     }
@@ -126,7 +126,7 @@ public class UserService {
         boolean losesAdminAccess = user.getRole() == Role.ADMIN && user.isActive()
                 && (request.role() != Role.ADMIN || !request.active());
         if (losesAdminAccess && userRepository.lockActiveAdmins().size() <= 1) {
-            throw ApiException.conflict("At least one active administrator is required");
+            throw ApiException.conflict("Tizimda kamida bitta faol administrator qolishi kerak");
         }
     }
 

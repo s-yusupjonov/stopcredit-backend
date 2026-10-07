@@ -15,10 +15,12 @@ public record CreditRequest(
         @NotBlank @Size(max = 100) String firstName,
         @NotBlank @Size(max = 100) String lastName,
         @Size(max = 100) String middleName,
-        @NotBlank @Pattern(regexp = "\\d{14}", message = "PINFL must be exactly 14 digits") String pinfl,
+        @NotBlank @Pattern(regexp = "\\d{14}", message = "PINFL 14 ta raqamdan iborat bo'lishi kerak") String pinfl,
         @NotNull CreditType type,
         @NotBlank @Size(max = 25) String mfo,
         @NotBlank @Size(max = 25) String applicationNumber,
         @NotNull @Positive @Digits(integer = 17, fraction = 2) BigDecimal amount,
-        @NotNull CreditStatus status) {
+        @NotNull CreditStatus status,
+        // version the client last saw; when sent, an update made from a stale screen is rejected with 409
+        Long version) {
 }
