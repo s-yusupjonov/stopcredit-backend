@@ -8,6 +8,9 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+
 @Entity
 @Table(name = "users")
 @Getter
@@ -33,4 +36,14 @@ public class User extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 16)
     private AuthSource authSource = AuthSource.LOCAL;
+
+    private Instant tokensValidAfter;
+
+    public void revokeTokens() {
+        tokensValidAfter = Instant.now();
+    }
+
+    public boolean acceptsTokenIssuedAt(Instant issuedAt) {
+        return tokensValidAfter == null || !issuedAt.isBefore(tokensValidAfter.truncatedTo(ChronoUnit.SECONDS));
+    }
 }

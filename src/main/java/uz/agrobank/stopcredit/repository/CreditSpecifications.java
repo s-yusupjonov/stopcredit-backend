@@ -22,7 +22,7 @@ public final class CreditSpecifications {
                 .and(matchesText(filter.q()));
     }
 
-    private static Specification<Credit> inStages(Set<CreditStage> stages) {
+    public static Specification<Credit> inStages(Set<CreditStage> stages) {
         return (root, query, cb) -> stages.isEmpty() ? cb.disjunction() : root.get("stage").in(stages);
     }
 
@@ -33,11 +33,12 @@ public final class CreditSpecifications {
         return (root, query, cb) -> cb.equal(root.get(attribute), value);
     }
 
-    private static Specification<Credit> overdue(Boolean danger, Instant now) {
-        if (!Boolean.TRUE.equals(danger)) {
-            return null;
-        }
+    public static Specification<Credit> overdue(Instant now) {
         return (root, query, cb) -> cb.lessThan(root.<Instant>get("stageDeadline"), now);
+    }
+
+    private static Specification<Credit> overdue(Boolean danger, Instant now) {
+        return Boolean.TRUE.equals(danger) ? overdue(now) : null;
     }
 
     private static Specification<Credit> matchesText(String text) {

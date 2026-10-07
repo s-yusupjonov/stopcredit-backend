@@ -68,7 +68,8 @@ public class CardController {
     }
 
     @PutMapping("/{id}")
-    public CardResponse update(@PathVariable Long id, @Valid @RequestBody CardRequest request) {
-        return cardService.update(id, request);
+    public CardResponse update(@AuthenticationPrincipal AuthUser user, @PathVariable Long id,
+                               @Valid @RequestBody CardRequest request) {
+        return cardService.update(user, id, request);
     }
 }

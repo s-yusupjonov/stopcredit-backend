@@ -3,8 +3,9 @@ package uz.agrobank.stopcredit.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
+import uz.agrobank.stopcredit.domain.AuditAction;
+import uz.agrobank.stopcredit.domain.AuditEntity;
 import uz.agrobank.stopcredit.domain.Credit;
 import uz.agrobank.stopcredit.domain.CreditDocument;
 import uz.agrobank.stopcredit.domain.CreditStage;
@@ -17,38 +18,28 @@ import uz.agrobank.stopcredit.repository.CreditDocumentRepository;
 import uz.agrobank.stopcredit.repository.UserRepository;
 import uz.agrobank.stopcredit.security.AuthUser;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class CreditDocumentService {
-
-    private static final String PDF_CONTENT_TYPE = "application/pdf";
-    private static final byte[] PDF_MAGIC = "%PDF-".getBytes(StandardCharsets.US_ASCII);
 
     private final CreditDocumentRepository documentRepository;
     private final UserRepository userRepository;
     private final CreditAccess access;
     private final CreditMapper mapper;
     private final FileStorage storage;
+    private final PdfStorage pdfStorage;
+    private final AuditService audit;
 
     @Transactional
     public List<DocumentResponse> upload(AuthUser user, Long creditId, List<MultipartFile> files) {
         Credit credit = access.loadForWork(user, creditId);
-        if (files == null || files.isEmpty()) {
-            throw ApiException.badRequest("At least one PDF file is required");
-        }
-        files.forEach(this::requirePdf); // validate all before storing any
         User uploader = userRepository.getReferenceById(user.id());
-        return files.stream()
-                .map(file -> mapper.toResponse(store(credit, uploader, file)))
+        String keyPrefix = "credits/%d/%s/".formatted(credit.getId(), credit.getStage().name().toLowerCase(Locale.ROOT));
+        return pdfStorage.storeAll(files, keyPrefix).stream()
+                .map(pdf -> mapper.toResponse(save(user, credit, uploader, pdf)))
                 .toList();
     }
 
@@ -67,8 +58,9 @@ public class CreditDocumentService {
         if (document.getStage() != credit.getStage()) {
             throw ApiException.forbidden("Documents of previous stages cannot be removed");
         }
-        storage.delete(document.getObjectKey());
         documentRepository.delete(document);
+        pdfStorage.deleteAfterCommit(document.getObjectKey());
+        audit.record(user, AuditEntity.CREDIT, creditId, AuditAction.DELETE_DOCUMENT, document.getFileName());
     }
 
     @Transactional(readOnly = true)
@@ -83,40 +75,21 @@ public class CreditDocumentService {
         return documentRepository.existsByCreditIdAndStage(creditId, stage);
     }
 
-    private CreditDocument store(Credit credit, User uploader, MultipartFile file) {
-        String objectKey = "credits/%d/%s/%s.pdf".formatted(
-                credit.getId(), credit.getStage().name().toLowerCase(Locale.ROOT), UUID.randomUUID());
-        try (InputStream in = file.getInputStream()) {
-            storage.put(objectKey, in, file.getSize(), PDF_CONTENT_TYPE);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
+    private CreditDocument save(AuthUser actor, Credit credit, User uploader, StoredPdf pdf) {
         CreditDocument document = new CreditDocument();
         document.setCredit(credit);
         document.setStage(credit.getStage());
-        document.setFileName(StringUtils.getFilename(StringUtils.cleanPath(file.getOriginalFilename())));
-        document.setObjectKey(objectKey);
-        document.setSizeBytes(file.getSize());
+        document.setFileName(pdf.fileName());
+        document.setObjectKey(pdf.objectKey());
+        document.setSizeBytes(pdf.sizeBytes());
         document.setUploadedBy(uploader);
-        return documentRepository.saveAndFlush(document);
+        CreditDocument saved = documentRepository.saveAndFlush(document);
+        audit.record(actor, AuditEntity.CREDIT, credit.getId(), AuditAction.UPLOAD_DOCUMENT, pdf.fileName());
+        return saved;
     }
 
     private CreditDocument find(Credit credit, Long documentId) {
         return documentRepository.findByIdAndCreditId(documentId, credit.getId())
                 .orElseThrow(() -> ApiException.notFound("Document not found: " + documentId));
-    }
-
-    private void requirePdf(MultipartFile file) {
-        String name = file.getOriginalFilename();
-        if (file.isEmpty() || name == null || !name.toLowerCase(Locale.ROOT).endsWith(".pdf")) {
-            throw ApiException.badRequest("Only non-empty PDF files are allowed: " + name);
-        }
-        try (InputStream in = file.getInputStream()) {
-            if (!Arrays.equals(in.readNBytes(PDF_MAGIC.length), PDF_MAGIC)) {
-                throw ApiException.badRequest("File is not a valid PDF: " + name);
-            }
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
     }
 }

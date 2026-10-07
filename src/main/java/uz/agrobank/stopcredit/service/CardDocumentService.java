@@ -3,8 +3,9 @@ package uz.agrobank.stopcredit.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
+import uz.agrobank.stopcredit.domain.AuditAction;
+import uz.agrobank.stopcredit.domain.AuditEntity;
 import uz.agrobank.stopcredit.domain.Card;
 import uz.agrobank.stopcredit.domain.CardDocument;
 import uz.agrobank.stopcredit.dto.CardDocumentResponse;
@@ -13,34 +14,26 @@ import uz.agrobank.stopcredit.exception.ApiException;
 import uz.agrobank.stopcredit.mapper.CardMapper;
 import uz.agrobank.stopcredit.repository.CardDocumentRepository;
 import uz.agrobank.stopcredit.repository.CardRepository;
-import uz.agrobank.stopcredit.repository.UserRepository;
 import uz.agrobank.stopcredit.security.AuthUser;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Locale;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class CardDocumentService {
 
-    private static final String PDF_CONTENT_TYPE = "application/pdf";
-    private static final byte[] PDF_MAGIC = "%PDF-".getBytes(StandardCharsets.US_ASCII);
-
     private final CardDocumentRepository documentRepository;
     private final CardRepository cardRepository;
-    private final UserRepository userRepository;
+    private final UserService userService;
     private final CardMapper mapper;
     private final FileStorage storage;
+    private final PdfStorage pdfStorage;
+    private final AuditService audit;
 
     @Transactional
     public List<CardDocumentResponse> upload(AuthUser user, Long cardId, List<MultipartFile> files) {
         Card card = findCard(cardId);
+<<<<<<< Updated upstream
         if (files == null || files.isEmpty()) {
             throw ApiException.badRequest("At least one PDF file is required");
         }
@@ -50,6 +43,19 @@ public class CardDocumentService {
                 .getFullName();
         return files.stream()
                 .map(file -> mapper.toResponse(store(card, uploader, file)))
+=======
+        List<CardDocumentResponse> uploaded = attach(card, userService.fullNameOf(user), files, CardDocumentKind.RESTRICTION);
+        uploaded.forEach(document -> audit.record(user, AuditEntity.CARD, cardId,
+                AuditAction.UPLOAD_DOCUMENT, document.fileName()));
+        return uploaded;
+    }
+
+    @Transactional
+    public List<CardDocumentResponse> attach(Card card, String uploader, List<MultipartFile> files,
+                                             CardDocumentKind kind) {
+        return pdfStorage.storeAll(files, "cards/%d/".formatted(card.getId())).stream()
+                .map(pdf -> mapper.toResponse(save(card, uploader, pdf, kind)))
+>>>>>>> Stashed changes
                 .toList();
     }
 
@@ -61,10 +67,11 @@ public class CardDocumentService {
     }
 
     @Transactional
-    public void delete(Long cardId, Long documentId) {
+    public void delete(AuthUser user, Long cardId, Long documentId) {
         CardDocument document = find(cardId, documentId);
-        storage.delete(document.getObjectKey());
         documentRepository.delete(document);
+        pdfStorage.deleteAfterCommit(document.getObjectKey());
+        audit.record(user, AuditEntity.CARD, cardId, AuditAction.DELETE_DOCUMENT, document.getFileName());
     }
 
     @Transactional(readOnly = true)
@@ -74,6 +81,7 @@ public class CardDocumentService {
                 .toList();
     }
 
+<<<<<<< Updated upstream
     private CardDocument store(Card card, String uploader, MultipartFile file) {
         String objectKey = "cards/%d/%s.pdf".formatted(card.getId(), UUID.randomUUID());
         try (InputStream in = file.getInputStream()) {
@@ -86,6 +94,15 @@ public class CardDocumentService {
         document.setFileName(StringUtils.getFilename(StringUtils.cleanPath(file.getOriginalFilename())));
         document.setObjectKey(objectKey);
         document.setSizeBytes(file.getSize());
+=======
+    private CardDocument save(Card card, String uploader, StoredPdf pdf, CardDocumentKind kind) {
+        CardDocument document = new CardDocument();
+        document.setCard(card);
+        document.setFileName(pdf.fileName());
+        document.setObjectKey(pdf.objectKey());
+        document.setSizeBytes(pdf.sizeBytes());
+        document.setKind(kind);
+>>>>>>> Stashed changes
         document.setUploadedBy(uploader);
         return documentRepository.saveAndFlush(document);
     }
@@ -99,6 +116,7 @@ public class CardDocumentService {
         return documentRepository.findByIdAndCardId(documentId, cardId)
                 .orElseThrow(() -> ApiException.notFound("Document not found: " + documentId));
     }
+<<<<<<< Updated upstream
 
     private void requirePdf(MultipartFile file) {
         String name = file.getOriginalFilename();
@@ -113,4 +131,6 @@ public class CardDocumentService {
             throw new UncheckedIOException(e);
         }
     }
+=======
+>>>>>>> Stashed changes
 }

@@ -8,11 +8,15 @@ import uz.agrobank.stopcredit.domain.AuthSource;
 import uz.agrobank.stopcredit.domain.User;
 import uz.agrobank.stopcredit.dto.LoginRequest;
 import uz.agrobank.stopcredit.dto.LoginResponse;
+import uz.agrobank.stopcredit.dto.UserResponse;
 import uz.agrobank.stopcredit.exception.ApiException;
 import uz.agrobank.stopcredit.mapper.UserMapper;
 import uz.agrobank.stopcredit.repository.UserRepository;
+import uz.agrobank.stopcredit.security.AuthUser;
 import uz.agrobank.stopcredit.security.JwtService;
+import uz.agrobank.stopcredit.security.LoginAttemptLimiter;
 
+import java.util.Locale;
 import java.util.Optional;
 
 @Service
@@ -25,22 +29,41 @@ public class AuthService {
     private final UserMapper userMapper;
     private final LdapAuthenticationService ldapAuthenticationService;
     private final LdapUserProvisioningService ldapUserProvisioningService;
+    private final LoginAttemptLimiter loginAttemptLimiter;
 
-    @Transactional
+    // Deliberately not transactional: a rejected login must not roll back a freshly provisioned AD user
     public LoginResponse login(LoginRequest request) {
         String username = request.username().trim();
-        User user = authenticate(username, request.password());
+        String attemptKey = username.toLowerCase(Locale.ROOT);
+        loginAttemptLimiter.checkAllowed(attemptKey);
 
-        if (!user.isActive()) {
-            throw ApiException.unauthorized("Invalid username or password");
-        }
-
+        User user = authenticateActiveUser(username, request.password(), attemptKey);
+        loginAttemptLimiter.reset(attemptKey);
         return new LoginResponse(jwtService.generate(user), userMapper.toResponse(user));
     }
 
-    private User authenticate(String username, String password) {
+    @Transactional(readOnly = true)
+    public UserResponse currentUser(AuthUser principal) {
+        return userRepository.findById(principal.id())
+                .map(userMapper::toResponse)
+                .orElseThrow(() -> ApiException.unauthorized("User not found"));
+    }
 
-        Optional<User> existing = userRepository.findByUsername(username);
+    private User authenticateActiveUser(String username, String password, String attemptKey) {
+        try {
+            User user = authenticate(username, password);
+            if (!user.isActive()) {
+                throw invalidCredentials();
+            }
+            return user;
+        } catch (ApiException e) {
+            loginAttemptLimiter.recordFailure(attemptKey);
+            throw e;
+        }
+    }
+
+    private User authenticate(String username, String password) {
+        Optional<User> existing = userRepository.findByUsernameIgnoreCase(username);
 
         if (existing.isPresent() && existing.get().getAuthSource() == AuthSource.LOCAL) {
             return authenticateLocal(existing.get(), password);
@@ -51,17 +74,21 @@ public class AuthService {
 
     private User authenticateLocal(User user, String password) {
         if (!passwordEncoder.matches(password, user.getPasswordHash())) {
-            throw ApiException.unauthorized("Invalid username or password");
+            throw invalidCredentials();
         }
         return user;
     }
 
     private User authenticateAd(String username, String password) {
         if (!ldapAuthenticationService.authenticate(username, password)) {
-            throw ApiException.unauthorized("Invalid username or password");
+            throw invalidCredentials();
         }
         return ldapUserProvisioningService.provision(
                 username,
-                () -> ldapAuthenticationService.resolveFullName(username).orElse(username));
+                () -> ldapAuthenticationService.lookupFullName(username).orElse(username));
+    }
+
+    private ApiException invalidCredentials() {
+        return ApiException.unauthorized("Invalid username or password");
     }
 }
