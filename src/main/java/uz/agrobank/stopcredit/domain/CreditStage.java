@@ -31,6 +31,16 @@ public enum CreditStage {
         return values()[ordinal() + 1];
     }
 
+    public static Set<CreditStage> ownedBy(Role role) {
+        EnumSet<CreditStage> stages = EnumSet.noneOf(CreditStage.class);
+        for (CreditStage stage : values()) {
+            if (stage.isOwnedBy(role)) {
+                stages.add(stage);
+            }
+        }
+        return stages;
+    }
+
     // Departments see the credits directed to them and the ones they have already processed
     public static Set<CreditStage> visibleTo(Role role) {
         return switch (role) {

@@ -1,5 +1,6 @@
 package uz.agrobank.stopcredit.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import uz.agrobank.stopcredit.domain.CardBasisCategory;
 import uz.agrobank.stopcredit.domain.CardRestrictionType;
 import uz.agrobank.stopcredit.domain.CardStatus;
@@ -14,7 +15,7 @@ public record CardResponse(
         String cardNumber,
         String mfo,
         LocalDate restrictionDate,
-        BigDecimal balance,
+        @JsonInclude(JsonInclude.Include.ALWAYS) BigDecimal balance,
         CardRestrictionType restrictionType,
         CardBasisCategory basisCategory,
         String basisComment,
@@ -24,5 +25,9 @@ public record CardResponse(
         String senderName,
         Instant createdAt,
         Instant updatedAt,
+        String unblockOrderNumber,
+        String unblockComment,
+        Instant unblockedAt,
+        String unblockedBy,
         List<CardDocumentResponse> documents) {
 }

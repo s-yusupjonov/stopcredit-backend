@@ -26,6 +26,7 @@ import uz.agrobank.stopcredit.component.CreditExcelExporter;
 import uz.agrobank.stopcredit.dto.CreditFilter;
 import uz.agrobank.stopcredit.dto.CreditRequest;
 import uz.agrobank.stopcredit.dto.CreditResponse;
+import uz.agrobank.stopcredit.dto.CreditSummary;
 import uz.agrobank.stopcredit.dto.StatusUpdateRequest;
 import uz.agrobank.stopcredit.security.AuthUser;
 import uz.agrobank.stopcredit.service.CreditService;
@@ -53,6 +54,11 @@ public class CreditController {
             @ModelAttribute CreditFilter filter,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         return new PagedModel<>(creditService.search(user, filter, pageable));
+    }
+
+    @GetMapping("/summary")
+    public CreditSummary summary(@AuthenticationPrincipal AuthUser user, @ModelAttribute CreditFilter filter) {
+        return creditService.summary(user, filter);
     }
 
     @GetMapping("/export")

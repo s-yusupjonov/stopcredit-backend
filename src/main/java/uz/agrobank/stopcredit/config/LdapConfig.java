@@ -11,6 +11,9 @@ import java.util.Map;
 @Configuration
 public class LdapConfig {
 
+    private static final String CONNECT_TIMEOUT_MS = "5000";
+    private static final String READ_TIMEOUT_MS = "10000";
+
     private final LdapProperties properties;
 
     public LdapConfig(LdapProperties properties) {
@@ -29,6 +32,8 @@ public class LdapConfig {
 
         Map<String, Object> baseEnv = new HashMap<>();
         baseEnv.put("java.naming.ldap.attributes.binary", "objectGUID objectSid");
+        baseEnv.put("com.sun.jndi.ldap.connect.timeout", CONNECT_TIMEOUT_MS);
+        baseEnv.put("com.sun.jndi.ldap.read.timeout", READ_TIMEOUT_MS);
         contextSource.setBaseEnvironmentProperties(baseEnv);
 
         contextSource.afterPropertiesSet();

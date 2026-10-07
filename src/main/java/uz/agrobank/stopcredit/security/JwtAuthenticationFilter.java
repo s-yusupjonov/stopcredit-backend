@@ -30,12 +30,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         String header = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (header != null && header.startsWith(BEARER)) {
-            jwtService.parseUserId(header.substring(BEARER.length()))
-                    .flatMap(userRepository::findById)
-                    .filter(User::isActive)
+            jwtService.parse(header.substring(BEARER.length()))
+                    .flatMap(claims -> userRepository.findById(claims.userId()).filter(user -> accepts(user, claims)))
                     .ifPresent(this::authenticate);
         }
         chain.doFilter(request, response);
+    }
+
+    private boolean accepts(User user, TokenClaims claims) {
+        return user.isActive() && user.acceptsTokenIssuedAt(claims.issuedAt());
     }
 
     private void authenticate(User user) {

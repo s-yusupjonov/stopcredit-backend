@@ -52,7 +52,8 @@ public class CardDocumentController {
 
     @DeleteMapping("/{documentId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable Long cardId, @PathVariable Long documentId) {
-        documentService.delete(cardId, documentId);
+    public void delete(@AuthenticationPrincipal AuthUser user, @PathVariable Long cardId,
+                       @PathVariable Long documentId) {
+        documentService.delete(user, cardId, documentId);
     }
 }

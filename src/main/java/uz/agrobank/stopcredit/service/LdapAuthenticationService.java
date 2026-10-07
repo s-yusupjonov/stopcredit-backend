@@ -38,13 +38,13 @@ public class LdapAuthenticationService {
         }
     }
 
-    public Optional<String> resolveFullName(String username) {
+    public Optional<String> lookupFullName(String username) {
 
         String filter = resolveFilter(username);
 
         try {
             List<String> displayNames = ldapTemplate.search(properties.userSearchBase(), filter, this::displayNameOf);
-            return displayNames.stream().filter(name -> name != null && !name.isBlank()).findFirst();
+            return displayNames.stream().findFirst().map(name -> name.isBlank() ? username : name);
         } catch (RuntimeException e) {
             log.warn("ldap-full-name-lookup-failed: username={}, base={}, message={}",
                     username, properties.userSearchBase(), e.getMessage());
@@ -58,6 +58,6 @@ public class LdapAuthenticationService {
 
     private String displayNameOf(Attributes attrs) throws javax.naming.NamingException {
         Attribute attr = attrs.get(DISPLAY_NAME_ATTR);
-        return attr != null ? String.valueOf(attr.get()) : null;
+        return attr != null ? String.valueOf(attr.get()) : "";
     }
 }

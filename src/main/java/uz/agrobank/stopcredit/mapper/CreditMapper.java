@@ -23,7 +23,6 @@ public class CreditMapper {
         credit.setMfo(request.mfo().trim());
         credit.setApplicationNumber(request.applicationNumber().trim());
         credit.setAmount(request.amount());
-        credit.setStatus(request.status());
     }
 
     public CreditResponse toResponse(Credit credit, Instant now, List<DocumentResponse> documents) {

@@ -1,5 +1,6 @@
 package uz.agrobank.stopcredit.security;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -36,11 +37,10 @@ public class JwtService {
                 .compact();
     }
 
-    public Optional<Long> parseUserId(String token) {
+    public Optional<TokenClaims> parse(String token) {
         try {
-            String subject = Jwts.parser().verifyWith(key).build()
-                    .parseSignedClaims(token).getPayload().getSubject();
-            return Optional.of(Long.valueOf(subject));
+            Claims claims = Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
+            return Optional.of(new TokenClaims(Long.valueOf(claims.getSubject()), claims.getIssuedAt().toInstant()));
         } catch (JwtException | IllegalArgumentException e) {
             return Optional.empty();
         }
