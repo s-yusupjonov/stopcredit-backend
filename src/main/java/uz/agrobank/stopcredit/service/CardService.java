@@ -7,17 +7,17 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-<<<<<<< Updated upstream
-=======
 import org.springframework.web.multipart.MultipartFile;
 import uz.agrobank.stopcredit.domain.AuditAction;
 import uz.agrobank.stopcredit.domain.AuditEntity;
->>>>>>> Stashed changes
 import uz.agrobank.stopcredit.domain.Card;
+import uz.agrobank.stopcredit.domain.CardDocumentKind;
+import uz.agrobank.stopcredit.domain.CardStatus;
 import uz.agrobank.stopcredit.domain.Executor;
 import uz.agrobank.stopcredit.dto.CardFilter;
 import uz.agrobank.stopcredit.dto.CardRequest;
 import uz.agrobank.stopcredit.dto.CardResponse;
+import uz.agrobank.stopcredit.dto.CardUnblockRequest;
 import uz.agrobank.stopcredit.exception.ApiException;
 import uz.agrobank.stopcredit.mapper.CardMapper;
 import uz.agrobank.stopcredit.repository.CardRepository;
@@ -25,6 +25,7 @@ import uz.agrobank.stopcredit.repository.CardSpecifications;
 import uz.agrobank.stopcredit.repository.ExecutorRepository;
 import uz.agrobank.stopcredit.security.AuthUser;
 
+import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -49,23 +50,16 @@ public class CardService {
     }
 
     @Transactional
-<<<<<<< Updated upstream
-    public CardResponse update(Long id, CardRequest request) {
-        Card card = find(id);
-=======
     public CardResponse update(AuthUser user, Long id, CardRequest request) {
         Card card = findForUpdate(id);
         if (card.getStatus() != request.status()) {
             throw ApiException.badRequest("Card status can only be changed by unblocking the card");
         }
->>>>>>> Stashed changes
         mapper.apply(card, request, findExecutor(request.executorId()));
         audit.record(user, AuditEntity.CARD, id, AuditAction.UPDATE);
         return mapper.toResponse(cardRepository.saveAndFlush(card), null);
     }
 
-<<<<<<< Updated upstream
-=======
     @Transactional
     public CardResponse unblock(AuthUser user, Long id, CardUnblockRequest request, List<MultipartFile> files) {
         Card card = findForUpdate(id);
@@ -84,7 +78,6 @@ public class CardService {
         return mapper.toResponse(saved, documentService.findByCard(saved.getId()));
     }
 
->>>>>>> Stashed changes
     @Transactional(readOnly = true)
     public CardResponse get(Long id) {
         Card card = find(id);
@@ -122,13 +115,4 @@ public class CardService {
                 .orElseThrow(() -> ApiException.badRequest("Executor not found: " + id));
     }
 
-<<<<<<< Updated upstream
-    private String senderName(AuthUser user) {
-        return userRepository.findById(user.id())
-                .orElseThrow(() -> ApiException.unauthorized("User not found"))
-                .getFullName();
-    }
 }
-=======
-}
->>>>>>> Stashed changes

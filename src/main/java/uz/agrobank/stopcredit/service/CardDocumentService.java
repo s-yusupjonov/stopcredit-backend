@@ -8,6 +8,7 @@ import uz.agrobank.stopcredit.domain.AuditAction;
 import uz.agrobank.stopcredit.domain.AuditEntity;
 import uz.agrobank.stopcredit.domain.Card;
 import uz.agrobank.stopcredit.domain.CardDocument;
+import uz.agrobank.stopcredit.domain.CardDocumentKind;
 import uz.agrobank.stopcredit.dto.CardDocumentResponse;
 import uz.agrobank.stopcredit.dto.DownloadedFile;
 import uz.agrobank.stopcredit.exception.ApiException;
@@ -33,17 +34,6 @@ public class CardDocumentService {
     @Transactional
     public List<CardDocumentResponse> upload(AuthUser user, Long cardId, List<MultipartFile> files) {
         Card card = findCard(cardId);
-<<<<<<< Updated upstream
-        if (files == null || files.isEmpty()) {
-            throw ApiException.badRequest("At least one PDF file is required");
-        }
-        files.forEach(this::requirePdf);
-        String uploader = userRepository.findById(user.id())
-                .orElseThrow(() -> ApiException.unauthorized("User not found"))
-                .getFullName();
-        return files.stream()
-                .map(file -> mapper.toResponse(store(card, uploader, file)))
-=======
         List<CardDocumentResponse> uploaded = attach(card, userService.fullNameOf(user), files, CardDocumentKind.RESTRICTION);
         uploaded.forEach(document -> audit.record(user, AuditEntity.CARD, cardId,
                 AuditAction.UPLOAD_DOCUMENT, document.fileName()));
@@ -55,7 +45,6 @@ public class CardDocumentService {
                                              CardDocumentKind kind) {
         return pdfStorage.storeAll(files, "cards/%d/".formatted(card.getId())).stream()
                 .map(pdf -> mapper.toResponse(save(card, uploader, pdf, kind)))
->>>>>>> Stashed changes
                 .toList();
     }
 
@@ -81,20 +70,6 @@ public class CardDocumentService {
                 .toList();
     }
 
-<<<<<<< Updated upstream
-    private CardDocument store(Card card, String uploader, MultipartFile file) {
-        String objectKey = "cards/%d/%s.pdf".formatted(card.getId(), UUID.randomUUID());
-        try (InputStream in = file.getInputStream()) {
-            storage.put(objectKey, in, file.getSize(), PDF_CONTENT_TYPE);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-        CardDocument document = new CardDocument();
-        document.setCard(card);
-        document.setFileName(StringUtils.getFilename(StringUtils.cleanPath(file.getOriginalFilename())));
-        document.setObjectKey(objectKey);
-        document.setSizeBytes(file.getSize());
-=======
     private CardDocument save(Card card, String uploader, StoredPdf pdf, CardDocumentKind kind) {
         CardDocument document = new CardDocument();
         document.setCard(card);
@@ -102,7 +77,6 @@ public class CardDocumentService {
         document.setObjectKey(pdf.objectKey());
         document.setSizeBytes(pdf.sizeBytes());
         document.setKind(kind);
->>>>>>> Stashed changes
         document.setUploadedBy(uploader);
         return documentRepository.saveAndFlush(document);
     }
@@ -116,21 +90,4 @@ public class CardDocumentService {
         return documentRepository.findByIdAndCardId(documentId, cardId)
                 .orElseThrow(() -> ApiException.notFound("Document not found: " + documentId));
     }
-<<<<<<< Updated upstream
-
-    private void requirePdf(MultipartFile file) {
-        String name = file.getOriginalFilename();
-        if (file.isEmpty() || name == null || !name.toLowerCase(Locale.ROOT).endsWith(".pdf")) {
-            throw ApiException.badRequest("Only non-empty PDF files are allowed: " + name);
-        }
-        try (InputStream in = file.getInputStream()) {
-            if (!Arrays.equals(in.readNBytes(PDF_MAGIC.length), PDF_MAGIC)) {
-                throw ApiException.badRequest("File is not a valid PDF: " + name);
-            }
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
-=======
->>>>>>> Stashed changes
 }

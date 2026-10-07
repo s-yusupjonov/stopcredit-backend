@@ -17,16 +17,21 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import uz.agrobank.stopcredit.component.CardExcelExporter;
 import uz.agrobank.stopcredit.dto.CardFilter;
 import uz.agrobank.stopcredit.dto.CardRequest;
 import uz.agrobank.stopcredit.dto.CardResponse;
+import uz.agrobank.stopcredit.dto.CardUnblockRequest;
 import uz.agrobank.stopcredit.security.AuthUser;
 import uz.agrobank.stopcredit.service.CardService;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/cards")
@@ -71,5 +76,12 @@ public class CardController {
     public CardResponse update(@AuthenticationPrincipal AuthUser user, @PathVariable Long id,
                                @Valid @RequestBody CardRequest request) {
         return cardService.update(user, id, request);
+    }
+
+    @PostMapping(value = "/{id}/unblock", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public CardResponse unblock(@AuthenticationPrincipal AuthUser user, @PathVariable Long id,
+                                @Valid @ModelAttribute CardUnblockRequest request,
+                                @RequestParam("files") List<MultipartFile> files) {
+        return cardService.unblock(user, id, request, files);
     }
 }

@@ -17,7 +17,8 @@ public class CardExcelExporter extends ExcelExporter<CardResponse> {
 
     private static final String[] HEADERS = {
             "T/r", "Karta raqami", "MFO", "Sana", "Karta balansi", "Cheklov turi", "Asos",
-            "Buyruq raqami", "Status", "Eslatma", "Ijrochi", "Yuboruvchi", "Yaratilgan"};
+            "Buyruq raqami", "Status", "Eslatma", "Ijrochi", "Yuboruvchi", "Yaratilgan",
+            "Ochish buyruq raqami", "Ochish eslatmasi", "Ochilgan sana"};
 
     private static final Map<String, String> STATUS = Map.of("ACTIVE", "Aktiv", "BLOCKED", "Bloklangan");
     private static final Map<String, String> RESTRICTION = Map.of("FULL", "To'liq", "PARTIAL", "Qisman");
@@ -45,34 +46,6 @@ public class CardExcelExporter extends ExcelExporter<CardResponse> {
         return 22;
     }
 
-<<<<<<< Updated upstream
-            int rowIndex = 1;
-            for (CardResponse c : cards) {
-                Row row = sheet.createRow(rowIndex++);
-                row.createCell(0).setCellValue(c.id());
-                row.createCell(1).setCellValue(c.cardNumber());
-                row.createCell(2).setCellValue(text(c.mfo()));
-                row.createCell(3).setCellValue(format(c.restrictionDate()));
-                if (c.balance() != null) {
-                    Cell balance = row.createCell(4);
-                    balance.setCellValue(c.balance().doubleValue());
-                    balance.setCellStyle(moneyStyle);
-                }
-                row.createCell(5).setCellValue(c.restrictionType() == null ? "" : RESTRICTION.get(c.restrictionType().name()));
-                row.createCell(6).setCellValue(BASIS.get(c.basisCategory().name()));
-                row.createCell(7).setCellValue(text(c.basisComment()));
-                row.createCell(8).setCellValue(STATUS.get(c.status().name()));
-                row.createCell(9).setCellValue(text(c.statusComment()));
-                row.createCell(10).setCellValue(executor(c.executor()));
-                row.createCell(11).setCellValue(c.senderName());
-                row.createCell(12).setCellValue(format(c.createdAt()));
-            }
-
-            workbook.write(out);
-            return out.toByteArray();
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-=======
     @Override
     protected void fillRow(Row row, CardResponse c, CellStyle moneyStyle) {
         row.createCell(0).setCellValue(c.id());
@@ -81,7 +54,6 @@ public class CardExcelExporter extends ExcelExporter<CardResponse> {
         row.createCell(3).setCellValue(format(c.restrictionDate()));
         if (c.balance() != null) {
             setMoney(row.createCell(4), c.balance(), moneyStyle);
->>>>>>> Stashed changes
         }
         row.createCell(5).setCellValue(c.restrictionType() == null ? "" : RESTRICTION.get(c.restrictionType().name()));
         row.createCell(6).setCellValue(BASIS.get(c.basisCategory().name()));

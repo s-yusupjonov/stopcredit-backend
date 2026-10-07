@@ -50,6 +50,10 @@ public class CardMapper {
                 card.getSenderName(),
                 card.getCreatedAt(),
                 card.getUpdatedAt(),
+                card.getUnblockOrderNumber(),
+                card.getUnblockComment(),
+                card.getUnblockedAt(),
+                card.getUnblockedBy(),
                 documents);
     }
 
@@ -62,11 +66,12 @@ public class CardMapper {
                 document.getId(),
                 document.getFileName(),
                 document.getSizeBytes(),
+                document.getKind(),
                 document.getUploadedBy(),
                 document.getUploadedAt());
     }
 
-    private String blankToNull(String value) {
+    public String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value.trim();
     }
 

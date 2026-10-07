@@ -12,6 +12,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 
 @Entity
@@ -55,4 +56,15 @@ public class Card extends BaseEntity {
 
     @Column(nullable = false, length = 150, updatable = false)
     private String senderName;
+
+    @Column(length = 500)
+    private String unblockOrderNumber;
+
+    @Column(length = 500)
+    private String unblockComment;
+
+    private Instant unblockedAt;
+
+    @Column(name = "unblocked_by_name", length = 150)
+    private String unblockedBy;
 }

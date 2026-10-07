@@ -72,6 +72,8 @@ public final class CardSpecifications {
                     cb.like(cb.lower(root.<String>get("senderName")), lower),
                     cb.like(cb.lower(root.<String>get("basisComment")), lower),
                     cb.like(cb.lower(root.<String>get("statusComment")), lower),
+                    cb.like(cb.lower(root.<String>get("unblockOrderNumber")), lower),
+                    cb.like(cb.lower(root.<String>get("unblockComment")), lower),
                     cb.like(cb.lower(executor.<String>get("name")), lower));
         };
     }
