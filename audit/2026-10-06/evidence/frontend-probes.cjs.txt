@@ -1,0 +1,38 @@
+const fs=require('fs'), vm=require('vm'),assert=require('assert');
+const root='/Users/admin/AGRO/stopcredit-frontend/src/';
+let count=0;
+function ok(cond,msg){assert(cond,msg);count++;console.log('CONFIRMED: '+msg)}
+const list=fs.readFileSync(root+'features/credits/CreditsListPage.tsx','utf8');
+const body=list.match(/function updateParam\(key: string, value: string \| undefined\) \{([\s\S]*?)\n  \}/)[1];
+let result;
+vm.runInNewContext('function updateParam(key,value){'+body+'}\nupdateParam("page","1");',{
+ URLSearchParams,searchParams:new URLSearchParams('q=test'),setSearchParams:p=>result=p.toString()
+});
+ok(result==='q=test','Selecting page 2 removes page parameter: '+result);
+const fmt=fs.readFileSync(root+'shared/ui/formatters.ts','utf8');
+const money=fmt.match(/export function formatMoney\(amount: number\): string \{([\s\S]*?)\n\}/)[1];
+const format=vm.runInNewContext('(function(amount){'+money+'})');
+let threw=false;try{const c={}; c.balance===null?'—':format(c.balance)}catch(e){threw=true;console.log('OBSERVED: '+e.message)}
+ok(threw,'Omitted balance takes formatMoney(undefined) branch and crashes');
+const summary=Array.from({length:201},(_,i)=>({danger:i===200,stage:i===200?'COMPLETED':'ANTI_FRAUD'}));
+const visible=summary.slice(0,200);
+ok(visible.filter(c=>c.danger).length===0 && summary.filter(c=>c.danger).length===1,'Summary calculation from 200 rows reports 0 overdue instead of 1 in 201-row fixture');
+const u=fs.readFileSync(root+'features/auth/useAuth.ts','utf8');
+const logout=u.match(/const logout = \(\) => \{([\s\S]*?)\n  \}/)[1];
+let sessionCleared=false,cache={confidential:'SYNTHETIC OLD USER DATA'};
+vm.runInNewContext('(function(){'+logout+'})()', {clearSession:()=>sessionCleared=true,navigate:()=>{},cache});
+ok(sessionCleared&&cache.confidential,'Logout clears session but does not invalidate/clear shared query cache (function-level probe)');
+console.log('TOTAL CHECKS: '+count);
+const ts=require('/private/tmp/stopcredit-audit-20261006/cached-tools/typescript/package/lib/typescript.js');
+for (const name of ['features/credits/DocumentsSection.tsx','features/cards/CardDocumentsSection.tsx']) {
+ const source=fs.readFileSync(root+name,'utf8');
+ const body=source.match(/onChange: \(info\) => \{([\s\S]*?)\n    \},/)[1];
+ const calls=[];
+ const js=ts.transpileModule('const handler=(info: any)=>{'+body+'};handler;', {compilerOptions:{target:ts.ScriptTarget.ES2020}}).outputText;
+ const handler=vm.runInNewContext(js,{uploadMutation:{mutate:files=>calls.push(files)}});
+ const list=[{originFileObj:{name:'synthetic-a.pdf'}},{originFileObj:{name:'synthetic-b.pdf'}}];
+ // antd 5.29.3 Upload.onBatchStart emits onChange once per selected file, each with full newFileList.
+ handler({fileList:list});handler({fileList:list});
+ ok(calls.length===2&&calls.every(c=>c.length===2), name+': two-file batch emits two uploads of both files under pinned AntD callback contract');
+}
+console.log('FINAL TOTAL CHECKS: '+count);

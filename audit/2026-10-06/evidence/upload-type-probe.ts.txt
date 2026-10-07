@@ -1,0 +1,10 @@
+// Minimal dependency type reproduction: antd 5.29.3 UploadFile.originFileObj is RcFile,
+// RcFile extends File and includes uid and lastModifiedDate.
+interface RcFile extends File { uid: string; lastModifiedDate: Date; }
+interface UploadFile { originFileObj?: RcFile; }
+declare const info: { fileList: UploadFile[] };
+declare const uploadMutation: { mutate(files: File[]): void };
+const files = info.fileList
+  .map((f) => f.originFileObj)
+  .filter((f): f is File => !!f);
+if (files.length > 0) uploadMutation.mutate(files);

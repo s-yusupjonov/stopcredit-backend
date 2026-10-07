@@ -1,0 +1,17 @@
+2026-10-06 audit dependency checks
+
+Backend: Java 21.0.7, Maven 3.9.16. Main sources and existing test class compiled.
+mvn -o -B test: blocked at Surefire launcher 1.10.5 missing from cache.
+mvn -B test (approved outside sandbox): repo.maven.apache.org DNS failed.
+
+Frontend: Node 24.7.0, npm 11.5.1; temporary copy only.
+npm ci --ignore-scripts --no-audit --no-fund: registry.npmjs.org ENOTFOUND.
+Approved outside sandbox retry: same DNS failure.
+npm ci --offline --ignore-scripts --no-audit --no-fund using existing cache:
+ENOTCACHED for zustand 4.5.7.
+Full frontend build/lint not run.
+
+Exact cached TypeScript 5.9.3 was extracted read-only from integrity-addressed local cache
+for an isolated upload type reproducer. This is not the full frontend build.
+
+No external application, real LDAP, MinIO, PostgreSQL or production environment was contacted for functional tests.

@@ -1,0 +1,91 @@
+import java.lang.reflect.*;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.springframework.aop.framework.ProxyFactory;
+import org.springframework.transaction.*;
+import org.springframework.transaction.interceptor.TransactionInterceptor;
+import org.springframework.transaction.annotation.AnnotationTransactionAttributeSource;
+import org.springframework.transaction.support.*;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.util.ReflectionTestUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import jakarta.validation.Validation;
+import uz.agrobank.stopcredit.domain.*;
+import uz.agrobank.stopcredit.dto.*;
+import uz.agrobank.stopcredit.service.*;
+import uz.agrobank.stopcredit.repository.*;
+import uz.agrobank.stopcredit.mapper.*;
+import uz.agrobank.stopcredit.security.*;
+import uz.agrobank.stopcredit.config.*;
+import uz.agrobank.stopcredit.exception.*;
+
+public class AuditProbe {
+ static int checks;
+ static void ok(boolean result,String text){if(!result)throw new AssertionError(text);System.out.println("CONFIRMED: "+text);checks++;}
+ @SuppressWarnings("unchecked") static <T>T repo(Class<T> type,InvocationHandler h){return (T)Proxy.newProxyInstance(type.getClassLoader(),new Class[]{type},h);}
+ static class Tx extends AbstractPlatformTransactionManager {
+  boolean committed, rolledBack;
+  protected Object doGetTransaction(){return new Object();}
+  protected void doBegin(Object t,TransactionDefinition d){}
+  protected void doCommit(DefaultTransactionStatus s){committed=true;}
+  protected void doRollback(DefaultTransactionStatus s){rolledBack=true;}
+ }
+ public static void main(String[] args)throws Exception {
+  Class<?> tests=Class.forName("uz.agrobank.stopcredit.domain.CreditStageTest");
+  Constructor<?> ctor=tests.getDeclaredConstructor();ctor.setAccessible(true);Object instance=ctor.newInstance();
+  int old=0;for(Method m:tests.getDeclaredMethods())if(m.isAnnotationPresent(org.junit.jupiter.api.Test.class)){m.setAccessible(true);m.invoke(instance);old++;}
+  ok(old==6,"6 existing CreditStageTest methods pass via direct reflective runner; not Maven Surefire");
+  AtomicInteger saves=new AtomicInteger();
+  UserRepository users=repo(UserRepository.class,(p,m,a)->switch(m.getName()){
+   case "findByUsername"->Optional.empty();case "save"->{saves.incrementAndGet();yield a[0];}default->throw new UnsupportedOperationException(m.getName());});
+  LdapAuthenticationService ldap=new LdapAuthenticationService(null,null){
+   public boolean authenticate(String u,String p){return true;}
+   public Optional<String> resolveFullName(String u){return Optional.of("Synthetic User");}
+  };
+  AuthService auth=new AuthService(users,new BCryptPasswordEncoder(),null,new UserMapper(),ldap,new LdapUserProvisioningService(users));
+  Tx tx=new Tx();ProxyFactory pf=new ProxyFactory(auth);
+  pf.addAdvice(new TransactionInterceptor(tx,new AnnotationTransactionAttributeSource()));
+  try{((AuthService)pf.getProxy()).login(new LoginRequest("synthetic.ad","synthetic-test-password"));throw new AssertionError("login should reject inactive user");}catch(ApiException expected){}
+  ok(saves.get()==1 && tx.rolledBack && !tx.committed,"AD provision save participates in login transaction which rolls back on inactive rejection (transaction spy, no live DB/LDAP)");
+  Credit c=new Credit();ReflectionTestUtils.setField(c,"id",1L);c.setStage(CreditStage.LEGAL);c.setStatus(CreditStatus.STOPPED);User creator=new User();creator.setFullName("Synthetic");c.setCreatedBy(creator);
+  CreditRepository credits=repo(CreditRepository.class,(p,m,a)->switch(m.getName()){
+   case "findById"->Optional.of(c);case "existsByApplicationNumberAndIdNot"->false;case "saveAndFlush"->a[0];default->throw new UnsupportedOperationException(m.getName());});
+  CreditService svc=new CreditService(credits,null,new CreditAccess(credits),new CreditMapper(),null,new CreditProperties(3));
+  var req=new CreditRequest("Test","Person",null,"00000000000000",CreditType.ONLINE,"00000","AUDIT-SYNTHETIC",BigDecimal.ONE,CreditStatus.ACTIVE);
+  svc.update(new AuthUser(2L,"synthetic.legal",Role.LEGAL),1L,req);
+  ok(c.getStatus()==CreditStatus.ACTIVE,"LEGAL at own stage can change credit status via general update service");
+  try(var factory=Validation.buildDefaultValidatorFactory()){
+   var validator=factory.getValidator();
+   ok(validator.validate(new UserUpdateRequest("Synthetic",Role.LEGAL,true,"x")).isEmpty(),"UserUpdateRequest accepts one-character replacement password");
+   ok(!validator.validate(new UserCreateRequest("synthetic.ad",null,"Synthetic",Role.LEGAL)).isEmpty(),"AD create payload without password is rejected by backend DTO");
+  }
+  Card card=new Card();ReflectionTestUtils.setField(card,"id",1L);card.setCardNumber("0000000000000000");card.setStatus(CardStatus.BLOCKED);card.setBasisCategory(CardBasisCategory.OTHER);card.setSenderName("Synthetic");Executor ex=new Executor();ex.setName("Synthetic");card.setExecutor(ex);
+  ObjectMapper json=new ObjectMapper().findAndRegisterModules().setSerializationInclusion(JsonInclude.Include.NON_NULL);
+  String payload=json.writeValueAsString(new CardMapper().toResponse(card,null));
+  ok(!json.readTree(payload).has("balance"),"NON_NULL card response omits balance key when balance is empty");
+  AtomicInteger uploaded=new AtomicInteger();AtomicInteger deleted=new AtomicInteger();
+  FileStorage storage=new FileStorage(){
+   public void put(String key,java.io.InputStream in,long size,String type){uploaded.incrementAndGet();}
+   public java.io.InputStream get(String key){return null;}
+   public void delete(String key){deleted.incrementAndGet();}
+  };
+  UserRepository uploadUsers=repo(UserRepository.class,(p,m,a)->Optional.of(creator));
+  CardRepository cards=repo(CardRepository.class,(p,m,a)->Optional.of(card));
+  CardDocument document=new CardDocument();document.setObjectKey("synthetic-key");
+  CardDocumentRepository docs=repo(CardDocumentRepository.class,(p,m,a)->switch(m.getName()){
+   case "saveAndFlush"->a[0];case "findByIdAndCardId"->Optional.of(document);case "delete"->throw new IllegalStateException("synthetic database failure");default->throw new UnsupportedOperationException(m.getName());});
+  CardDocumentService documents=new CardDocumentService(docs,cards,uploadUsers,new CardMapper(),storage);
+  documents.upload(new AuthUser(1L,"synthetic",Role.ANTI_FRAUD),1L,List.of(new MockMultipartFile("files","synthetic.pdf","application/pdf","%PDF-not-a-real-pdf".getBytes())));
+  ok(uploaded.get()==1,"Invalid PDF with matching five-byte prefix is accepted and stored");
+  try{documents.delete(1L,1L);throw new AssertionError();}catch(IllegalStateException expected){}
+  ok(deleted.get()==1,"Object storage deletion happens before database deletion and remains uncompensated on failure");
+  User tokenUser=new User();ReflectionTestUtils.setField(tokenUser,"id",1L);tokenUser.setRole(Role.LEGAL);tokenUser.setPasswordHash("old-test-hash");
+  JwtService jwt=new JwtService(new JwtProperties("synthetic-audit-only-secret-at-least-32-bytes-long",480));String token=jwt.generate(tokenUser);tokenUser.setPasswordHash("new-test-hash");
+  ok(jwt.parseUserId(token).orElse(-1L)==1L,"JWT stays valid after password hash changes; no credential-version binding");
+  System.out.println("TOTAL CHECKS: "+checks);
+ }
+}
